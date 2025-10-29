@@ -2,27 +2,32 @@ import React, { useState } from 'react';
 import { Member } from '../types';
 
 interface SignUpProps {
-  onSignUp: (username, password, memberId) => boolean;
+  onSignUp: (email, password, memberId) => Promise<void>;
   onNavigateToLogin: () => void;
   members: Member[];
 }
 
 const SignUp: React.FC<SignUpProps> = ({ onSignUp, onNavigateToLogin, members }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [memberId, setMemberId] = useState(members[0]?.id || '');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!memberId) {
         setError('Por favor, selecione um membro.');
         return;
     }
-    const success = onSignUp(username, password, memberId);
-    if (!success) {
-      setError('Este nome de usuário já está em uso.');
+    setLoading(true);
+    try {
+      await onSignUp(email, password, memberId);
+    } catch (err) {
+      setError(err.message || 'Falha ao criar conta. O email pode já estar em uso.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,16 +44,17 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onNavigateToLogin, members })
         <form onSubmit={handleSubmit}>
           {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-sm">{error}</p>}
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
-              Nome de Usuário
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+              Email
             </label>
             <input
               className="shadow-sm appearance-none border border-gray-300 rounded w-full py-2 px-3 bg-white text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-tce-pi-blue"
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="mb-4">
@@ -62,6 +68,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onNavigateToLogin, members })
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
            <div className="mb-6">
@@ -74,6 +81,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onNavigateToLogin, members })
               onChange={(e) => setMemberId(e.target.value)}
               className="shadow-sm appearance-none border border-gray-300 rounded w-full py-2 px-3 bg-white text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-tce-pi-blue"
               required
+              disabled={loading}
             >
                 <option value="" disabled>Selecione um membro</option>
                 {members.map(member => (
@@ -83,10 +91,11 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onNavigateToLogin, members })
           </div>
           <div className="flex items-center justify-between">
             <button
-              className="bg-tce-pi-green hover:bg-tce-pi-green-dark text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+              className="bg-tce-pi-green hover:bg-tce-pi-green-dark text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full disabled:bg-gray-400"
               type="submit"
+              disabled={loading}
             >
-              Criar Conta
+              {loading ? 'Criando...' : 'Criar Conta'}
             </button>
           </div>
         </form>

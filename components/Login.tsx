@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
 
 interface LoginProps {
-  onLogin: (username, password) => boolean;
+  onLogin: (email, password) => Promise<void>;
   onNavigateToSignUp: () => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToSignUp }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const success = onLogin(username, password);
-    if (!success) {
-      setError('Nome de usuário ou senha inválidos.');
+    setLoading(true);
+    try {
+      await onLogin(email, password);
+    } catch (err) {
+      setError(err.message || 'Falha no login. Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -32,16 +37,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToSignUp }) => {
         <form onSubmit={handleSubmit}>
           {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-sm">{error}</p>}
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
-              Nome de Usuário
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+              Email
             </label>
             <input
               className="shadow-sm appearance-none border border-gray-300 rounded w-full py-2 px-3 bg-white text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-tce-pi-blue"
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="mb-6">
@@ -55,14 +61,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToSignUp }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="flex items-center justify-between">
             <button
-              className="bg-tce-pi-green hover:bg-tce-pi-green-dark text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+              className="bg-tce-pi-green hover:bg-tce-pi-green-dark text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full disabled:bg-gray-400"
               type="submit"
+              disabled={loading}
             >
-              Entrar
+              {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </div>
         </form>

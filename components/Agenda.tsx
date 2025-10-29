@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { User, Member, Event } from '../types';
+import { Member, Event } from '../types';
 import { EVENT_TYPE_COLORS } from '../constants';
 import EventModal from './EventModal';
 import ShareModal from './ShareModal';
 import ReportModal from './ReportModal';
+import { User } from '@supabase/supabase-js';
 
 const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -13,7 +14,7 @@ interface AgendaProps {
   member: Member;
   events: Event[];
   onLogout: () => void;
-  onSaveEvents: (events: Event[]) => string | null;
+  onSaveEvents: (events: Event[]) => Promise<string | null>;
   onDeleteEvent: (eventId: string) => void;
 }
 
@@ -156,7 +157,7 @@ const Agenda: React.FC<AgendaProps> = ({ user, member, events, onLogout, onSaveE
       <header className="bg-white shadow-md p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-tce-pi-green">Agenda de {member.name}</h1>
-          <p className="text-gray-600 text-sm md:text-base">Bem-vindo(a), {user.username}!</p>
+          <p className="text-gray-600 text-sm md:text-base">Bem-vindo(a), {user.email}!</p>
         </div>
         <button onClick={onLogout} className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors w-full sm:w-auto">Sair</button>
       </header>
@@ -203,6 +204,7 @@ const Agenda: React.FC<AgendaProps> = ({ user, member, events, onLogout, onSaveE
                 {selectedDayEvents.map(event => {
                   const colors = getEventColorClasses(event.type);
                   const isMultiDayEvent = !!event.endDate;
+                  const canEdit = user.id === event.user_id;
                   return (
                     <li key={event.id} className={`p-3 rounded-lg border-l-4 ${colors.border} bg-gray-50`}>
                       <div className={`px-2 py-0.5 text-xs inline-block rounded-full mb-1 ${colors.bg} ${colors.text}`}>
@@ -225,10 +227,12 @@ const Agenda: React.FC<AgendaProps> = ({ user, member, events, onLogout, onSaveE
                         </p>
                       )}
                       {event.description && <p className="text-sm mt-1 text-gray-800 whitespace-pre-wrap">{event.description}</p>}
-                      <div className="mt-2 flex gap-2">
-                        <button onClick={() => handleEditEvent(event)} className="text-xs text-blue-600 hover:underline">Editar</button>
-                        <button onClick={() => handleDeleteEvent(event.id)} className="text-xs text-red-600 hover:underline">Excluir</button>
-                      </div>
+                      {canEdit && (
+                        <div className="mt-2 flex gap-2">
+                          <button onClick={() => handleEditEvent(event)} className="text-xs text-blue-600 hover:underline">Editar</button>
+                          <button onClick={() => handleDeleteEvent(event.id)} className="text-xs text-red-600 hover:underline">Excluir</button>
+                        </div>
+                      )}
                     </li>
                   )
                 })}
