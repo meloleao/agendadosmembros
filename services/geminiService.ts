@@ -1,11 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Event, EventType } from '../types';
 
-if (!process.env.API_KEY) {
-  console.warn("API_KEY environment variable not set. AI features will be disabled.");
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!GEMINI_API_KEY) {
+  console.warn("VITE_GEMINI_API_KEY environment variable not set. AI features will be disabled.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY! });
 
 const parseEventSchema = {
   type: Type.OBJECT,
@@ -16,7 +18,6 @@ const parseEventSchema = {
     },
     date: {
       type: Type.STRING,
-      // FIX: The current date is now passed in the prompt for better context, instead of being a static string here.
       description: "A data do evento no formato AAAA-MM-DD.",
     },
     startTime: {
@@ -45,11 +46,10 @@ const parseEventSchema = {
 
 
 export const parseEventFromText = async (text: string): Promise<Partial<Event> | null> => {
-  if (!process.env.API_KEY) {
+  if (!GEMINI_API_KEY) {
     throw new Error("A chave da API do Gemini não está configurada.");
   }
   try {
-    // FIX: Pass the current date in the prompt to give the model context for relative dates like "tomorrow".
     const today = new Date().toISOString().split('T')[0];
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -64,7 +64,6 @@ export const parseEventFromText = async (text: string): Promise<Partial<Event> |
     const jsonString = response.text;
     const parsedData = JSON.parse(jsonString);
     
-    // Validate event type
     if (parsedData.type && !Object.values(EventType).includes(parsedData.type as EventType)) {
         console.warn(`Tipo de evento inválido recebido da IA: ${parsedData.type}. Usando 'Outro' como padrão.`);
         parsedData.type = EventType.OUTRO;

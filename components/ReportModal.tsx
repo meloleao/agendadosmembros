@@ -34,7 +34,8 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, member, even
   }, [isOpen, lastMonthStr, today]);
 
   const handleGenerateReport = async () => {
-    if (!process.env.API_KEY) {
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) {
         setError("A chave da API do Gemini não está configurada. Não é possível gerar relatórios.");
         return;
     }
@@ -55,7 +56,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, member, even
         return;
       }
 
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
       const prompt = `
         Você é um assistente de geração de relatórios para o Tribunal de Contas do Estado do Piauí (TCE-PI).
