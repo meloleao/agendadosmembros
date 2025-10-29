@@ -86,6 +86,12 @@ const Agenda: React.FC<AgendaProps> = ({ user, member, events, onLogout, onSaveE
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   };
   
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today.toISOString().split('T')[0]);
+  };
+
   const handleAddEvent = () => {
     setEventToEdit(null);
     setIsEventModalOpen(true);
@@ -170,7 +176,10 @@ const Agenda: React.FC<AgendaProps> = ({ user, member, events, onLogout, onSaveE
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h2 className="text-lg md:text-xl font-semibold">{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg md:text-xl font-semibold text-center">{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
+                <button onClick={goToToday} className="px-3 py-1 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">Hoje</button>
+              </div>
               <button onClick={() => changeMonth(1)} className="p-2 rounded-full text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
