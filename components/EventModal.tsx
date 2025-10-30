@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Event, Member, EventType } from '../types';
-import { parseEventFromText } from '../services/geminiService';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -24,8 +23,6 @@ const initialFormData: Omit<Event, 'id' | 'memberId'> = {
 
 const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave, member, eventToEdit }) => {
   const [formData, setFormData] = useState(initialFormData);
-  const [aiInputText, setAiInputText] = useState('');
-  const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState('');
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -49,43 +46,12 @@ const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave, member
         setIsMultiDay(false);
       }
       setError('');
-      setAiInputText('');
     }
   }, [isOpen, eventToEdit]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handleParseText = async () => {
-      if (!aiInputText.trim()) {
-          setError("Por favor, insira um texto para ser analisado.");
-          return;
-      }
-      setIsParsing(true);
-      setError('');
-      try {
-          const parsedData = await parseEventFromText(aiInputText);
-          if (parsedData) {
-              setFormData(prev => ({
-                  ...prev,
-                  title: parsedData.title || prev.title,
-                  date: parsedData.date || prev.date,
-                  startTime: parsedData.startTime || prev.startTime,
-                  endTime: parsedData.endTime || prev.endTime,
-                  type: parsedData.type || prev.type,
-                  location: parsedData.location || '',
-                  description: parsedData.description || prev.description,
-              }));
-          } else {
-              setError("Não foi possível extrair informações do texto. Tente ser mais específico.");
-          }
-      } catch (e) {
-          setError("Ocorreu um erro ao analisar o texto. Verifique sua conexão ou a chave da API.");
-      } finally {
-          setIsParsing(false);
-      }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,28 +111,6 @@ const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave, member
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
         </div>
         
-        <div className="mb-4 p-4 border rounded-lg bg-gray-50">
-          <label htmlFor="ai-input" className="block text-sm font-bold text-gray-700 mb-2">
-            ✨ Agendamento Rápido com IA
-          </label>
-           <textarea
-            id="ai-input"
-            rows={3}
-            className={`${inputStyle} border-tce-pi-blue`}
-            placeholder="Ex: Reunião com a equipe de auditoria amanhã às 10h na sala 3 para discutir o relatório preliminar."
-            value={aiInputText}
-            onChange={(e) => setAiInputText(e.target.value)}
-            disabled={isParsing || isSaving}
-          />
-          <button 
-            onClick={handleParseText}
-            disabled={isParsing || isSaving}
-            className="mt-2 w-full sm:w-auto px-4 py-2 bg-tce-pi-blue text-white rounded-md hover:bg-opacity-90 flex items-center justify-center disabled:bg-gray-400"
-          >
-            {isParsing ? 'Analisando...' : 'Analisar com IA'}
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="bg-red-100 text-red-700 p-3 rounded-md text-sm">{error}</p>}
           

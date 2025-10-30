@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Member, Event } from '../types';
-import { GoogleGenAI } from '@google/genai';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -33,60 +32,50 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, member, even
     }
   }, [isOpen, lastMonthStr, today]);
 
-  const handleGenerateReport = async () => {
-    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-        setError("A chave da API do Gemini não está configurada. Não é possível gerar relatórios.");
-        return;
-    }
-
+  const handleGenerateReport = () => {
     setIsGenerating(true);
     setReport('');
     setError('');
 
-    try {
-      const filteredEvents = events.filter(event => {
+    const filteredEvents = events.filter(event => {
         const eventDate = event.date;
         return eventDate >= startDate && eventDate <= endDate;
-      }).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+    }).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
 
-      if (filteredEvents.length === 0) {
+    if (filteredEvents.length === 0) {
         setError("Nenhum evento encontrado no período selecionado.");
         setIsGenerating(false);
         return;
-      }
-
-      const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-      const prompt = `
-        Você é um assistente de geração de relatórios para o Tribunal de Contas do Estado do Piauí (TCE-PI).
-        Sua tarefa é criar um relatório de atividades conciso e profissional para ${member.name} com base nos eventos fornecidos.
-        
-        Período do Relatório: ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T12:00:00').toLocaleDateString('pt-BR')}.
-
-        Instruções:
-        1. Organize os eventos cronologicamente.
-        2. Para cada evento, mencione a data, o título, o horário (se aplicável), e um resumo da descrição.
-        3. Mantenha um tom formal e objetivo.
-        4. No final, escreva um parágrafo de resumo geral das atividades no período.
-        
-        Dados dos eventos (JSON):
-        ${JSON.stringify(filteredEvents, null, 2)}
-      `;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-
-      setReport(response.text);
-
-    } catch (err) {
-      console.error("Erro ao gerar relatório com a API Gemini:", err);
-      setError("Ocorreu um erro ao gerar o relatório. Tente novamente.");
-    } finally {
-      setIsGenerating(false);
     }
+
+    let reportText = `Relatório de Atividades de ${member.name}\n`;
+    reportText += `Período: ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T12:00:00').toLocaleDateString('pt-BR')}\n\n`;
+    reportText += "----------------------------------------\n\n";
+
+    filteredEvents.forEach(event => {
+        const eventDate = new Date(event.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+        reportText += `Data: ${eventDate}\n`;
+        reportText += `Título: ${event.title}\n`;
+        reportText += `Tipo: ${event.type}\n`;
+        
+        if (event.endDate) {
+            const endDateFormatted = new Date(event.endDate + 'T12:00:00').toLocaleDateString('pt-BR');
+            reportText += `Período: ${new Date(event.date + 'T12:00:00').toLocaleDateString('pt-BR')} a ${endDateFormatted}\n`;
+        } else {
+            reportText += `Horário: ${event.startTime} - ${event.endTime}\n`;
+        }
+
+        if (event.location) {
+            reportText += `Local: ${event.location}\n`;
+        }
+        if (event.description) {
+            reportText += `Descrição: ${event.description}\n`;
+        }
+        reportText += "\n----------------------------------------\n\n";
+    });
+
+    setReport(reportText);
+    setIsGenerating(false);
   };
   
   const handleShare = () => {
@@ -123,7 +112,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, member, even
                 disabled={isGenerating}
                 className="w-full px-4 py-2 bg-tce-pi-blue text-white rounded-md hover:bg-opacity-90 flex items-center justify-center disabled:bg-gray-400"
             >
-                {isGenerating ? 'Gerando Relatório...' : 'Gerar com IA'}
+                {isGenerating ? 'Gerando...' : 'Gerar Relatório'}
             </button>
             
             {error && <p className="bg-red-100 text-red-700 p-3 rounded-md text-sm">{error}</p>}
