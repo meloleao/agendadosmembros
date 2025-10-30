@@ -23,7 +23,7 @@ const dbEventToAppEvent = (dbEvent: any): Event => ({
 });
 
 const appEventToDbEvent = (appEvent: Event, userId: string, memberId: string) => ({
-  id: appEvent.id.length > 20 ? undefined : appEvent.id, // Let db generate id for new events
+  id: appEvent.id.length > 20 ? appEvent.id : undefined, // Use existing ID for updates, let db generate for new
   user_id: userId,
   member_id: memberId,
   title: appEvent.title,
@@ -126,26 +126,48 @@ const App: React.FC = () => {
     const newEvent = eventsToAdd[0];
 
     // --- Conflict Check ---
-    const { data: conflictingEvents, error: fetchError } = await supabase
+    const isEditing = newEvent.id.length > 20;
+
+    let query = supabase
       .from('events')
       .select('id, date, end_date, start_time, end_time, title')
-      .eq('member_id', profile.member_id)
-      .neq('id', newEvent.id); // Exclude the event being edited
+      .eq('member_id', profile.member_id);
+
+    // If we are editing an event, exclude it from the conflict check
+    if (isEditing) {
+      query = query.neq('id', newEvent.id);
+    }
+
+    const { data: conflictingEvents, error: fetchError } = await query;
 
     if (fetchError) {
       console.error("Error fetching for conflict check:", fetchError);
       return "Erro ao verificar conflitos.";
     }
 
-    const newEventStart = new Date(`${newEvent.date}T${newEvent.startTime}`);
-    const newEventEnd = new Date(`${newEvent.date}T${newEvent.endTime}`);
+    const isNewEventMultiDay = !!newEvent.endDate;
+    const newEventStartDateTime = isNewEventMultiDay 
+        ? new Date(`${newEvent.date}T00:00:00`) 
+        : new Date(`${newEvent.date}T${newEvent.startTime}`);
+    
+    const newEventEndDateTime = isNewEventMultiDay 
+        ? new Date(`${newEvent.endDate}T23:59:59`) 
+        : new Date(`${newEvent.date}T${newEvent.endTime}`);
 
     for (const existingEvent of conflictingEvents) {
-        const existingStart = new Date(`${existingEvent.date}T${existingEvent.start_time}`);
-        const existingEnd = new Date(`${existingEvent.date}T${existingEvent.end_time}`);
+        const isExistingEventMultiDay = !!existingEvent.end_date;
+        
+        const existingStartDateTime = isExistingEventMultiDay
+            ? new Date(`${existingEvent.date}T00:00:00`)
+            : new Date(`${existingEvent.date}T${existingEvent.start_time}`);
 
-        if (newEventStart < existingEnd && newEventEnd > existingStart) {
-            const conflictedDate = new Date(existingEvent.date + 'T00:00:00').toLocaleDateString('pt-BR');
+        const existingEndDateTime = isExistingEventMultiDay
+            ? new Date(`${existingEvent.end_date}T23:59:59`)
+            : new Date(`${existingEvent.date}T${existingEvent.end_time}`);
+
+        // Check for overlap: (StartA <= EndB) and (EndA >= StartB)
+        if (newEventStartDateTime < existingEndDateTime && newEventEndDateTime > existingStartDateTime) {
+            const conflictedDate = new Date(existingEvent.date + 'T12:00:00').toLocaleDateString('pt-BR');
             return `Conflito de agendamento detectado com "${existingEvent.title}" em ${conflictedDate}.`;
         }
     }
